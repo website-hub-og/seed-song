@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" href="music-logo.jpg">
+    <title>Seed Music Generator (Client-Side)</title>
+    <style>
+         body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #seedInput {
+            width: 300px;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: border-color 0.3s ease;
+        }
+
+        #seedInput:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        #generateButton, #downloadButton {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            margin: 10px;
+        }
+
+        #generateButton {
+            background-color: #007bff;
+            color: white;
+        }
+
+        #generateButton:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <input type="text" id="seedInput" placeholder="Enter seed">
+    <button id="generateButton">Generate</button>
+    <script>
+        document.getElementById('generateButton').addEventListener('click', generateMusic);
+
+        function generateMusic() {
+            const seed = document.getElementById('seedInput').value;
+            if (!seed) return;
+
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const seedHash = seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const notes = fractalNotes(seedHash); //Use fractal like note generation
+            const rhythm = generateRhythm(seedHash); //Generate a rhythm
+            const baseFrequency = 220; //A4
+
+            for (let i = 0; i < notes.length; i++) {
+                const noteFrequency = baseFrequency * Math.pow(2, notes[i] / 12);
+                const startTime = rhythm[i].startTime;
+                const duration = rhythm[i].duration;
+
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(noteFrequency, audioCtx.currentTime);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.start(audioCtx.currentTime + startTime);
+                oscillator.stop(audioCtx.currentTime + startTime + duration);
+
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime + startTime); //Reduced gain
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime + startTime + duration);
+            }
+        }
+
+        function fractalNotes(seed) {
+            let notes = [];
+            let current = seed % 10;
+            for (let i = 0; i < 30; i++) {
+                current = (current * current +seed) % 100; //add seed to add more variation
+                notes.push(current % 12);
+            }
+            return notes;
+        }
+
+        function generateRhythm(seed) {
+            let rhythm = [];
+            let time = 0;
+            let current = seed % 5;
+            for (let i = 0; i < 30; i++) {
+                current = (current * 3 + seed) % 8; //More complex rhythm generation.
+                let duration = (current % 3 + 1) * 0.2; //Varying note length
+                rhythm.push({ startTime: time, duration: duration });
+                time += duration + (current % 2) * 0.1; //Add small gaps
+            }
+            return rhythm;
+        }
+    </script>
+</body>
+</html>
